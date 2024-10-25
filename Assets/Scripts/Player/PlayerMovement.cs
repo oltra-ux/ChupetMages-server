@@ -241,7 +241,7 @@ public class PlayerMovement : NetworkBehaviour
             bufferIndex = inputPayload.tick % k_bufferSize;
 
             StatePayload statePayload = ProcessMovement(inputPayload);
-            serverCube.transform.position = statePayload.position;
+            //serverCube.transform.position = statePayload.position;
             serverStateBuffer.Add(statePayload, bufferIndex);
         }
 

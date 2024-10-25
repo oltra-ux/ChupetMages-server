@@ -25,14 +25,15 @@ public struct ShootPayload : INetworkSerializable
         serializer.SerializeValue(ref timestamp);
     }
 }
+
 [System.Serializable]
 public class Spell
 {
     public enum SpellType { Hitscan, Projectile }
     public SpellType spellType;
-    public float delayBetweenSpells = 0.5f; // Delay entre disparos de hechizos
-    public float projectileSpeed = 20f;     // Velocidad del proyectil
-    // Otras propiedades del hechizo como daño, efectos, etc.
+    public float spellDelay = 0.5f;
+    public float projectileSpeed = 20f;
+    public float damage = 20f; // Daño del hechizo
 }
 
 public class PlayerShooting : NetworkBehaviour
@@ -49,6 +50,8 @@ public class PlayerShooting : NetworkBehaviour
     [SerializeField] Transform cam;
     [SerializeField] Transform firePoint;
     [SerializeField] GameObject projectilePrefab;
+    [SerializeField] GameObject floatingTextPrefab;
+    private PlayerStats playerStats;
 
     [Header("Network General")]
     NetworkTimer timer;
@@ -62,6 +65,7 @@ public class PlayerShooting : NetworkBehaviour
         timer = new NetworkTimer(k_serverTickRate);
         clientStateBuffer = new CircularBuffer<StatePayload>(k_bufferSize);
         shootBuffer = new CircularBuffer<ShootPayload>(k_bufferSize);
+        playerStats = GetComponent<PlayerStats>();
     }
 
     void Update()
@@ -80,12 +84,22 @@ public class PlayerShooting : NetworkBehaviour
             if (firingCoroutine != null) StopCoroutine(firingCoroutine);
         }
     }
+    float CalculateTotalDelay()
+    {
+        // Sumar los delays de todos los hechizos
+        float delayBetweenSpells = spells.Sum(spell => spell.spellDelay);
+
+        // Verificar si el delay es menor o igual a 0 y ajustarlo
+        return Mathf.Max(delayBetweenSpells, 0.01f); // Delay mínimo de 0.01 segundos
+    }
 
     IEnumerator Fire()
     {
         while (isFiring)
         {
             Spell currentSpell = spells[currentSpellIndex];
+
+            float delayBetweenSpells = CalculateTotalDelay();
 
             if (currentSpell.spellType == Spell.SpellType.Hitscan)
             {
@@ -100,7 +114,7 @@ public class PlayerShooting : NetworkBehaviour
             currentSpellIndex = (currentSpellIndex + 1) % spells.Count;
 
             // Esperar el delay configurado entre hechizos
-            yield return new WaitForSeconds(currentSpell.delayBetweenSpells);
+            yield return new WaitForSeconds(delayBetweenSpells);
         }
     }
 
@@ -148,16 +162,16 @@ public class PlayerShooting : NetworkBehaviour
         GameObject projectile = Instantiate(projectilePrefab, projOrigin, shotRotation);
         NetworkObject projectileNetObj = projectile.GetComponent<NetworkObject>();
         projectileNetObj.Spawn();  // Solo el servidor puede spawnear el proyectil en la red
+        //SpawnProjectileClientRpc(projOrigin, shootPayload.shotDirection);
     }
+
     [ClientRpc]
     void SpawnProjectileClientRpc(Vector3 origin, Vector3 direction)
     {
-        Vector3 projOrigin = origin;
-        Quaternion shotRotation = Quaternion.LookRotation(transform.forward);
+        Quaternion shotRotation = Quaternion.LookRotation(direction);
 
-        GameObject projectile = Instantiate(projectilePrefab, projOrigin, shotRotation);
-        NetworkObject projectileNetObj = projectile.GetComponent<NetworkObject>();
-        projectileNetObj.Spawn();
+        // Spawnear el proyectil en el cliente
+        GameObject projectile = Instantiate(projectilePrefab, origin, shotRotation);
     }
 
     [ServerRpc]
@@ -174,11 +188,60 @@ public class PlayerShooting : NetworkBehaviour
         if (Physics.Raycast(ray, out hit, shotRange, hitMask))
         {
             // Impacto detectado
+            if (hit.collider.gameObject == gameObject) return;
+            PlayerStats targetStats = hit.collider.GetComponent<PlayerStats>();
+            if (targetStats != null && IsEnemy(hit.collider))  // Agregamos lógica para enemigos
+            {
+                // Aplicar el daño solo en el servidor
+                ApplyDamageServerRpc(targetStats.NetworkObjectId, spells[currentSpellIndex].damage);
+
+                // Mostrar el texto flotante solo para el cliente que disparó
+                ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
+            }
             Debug.Log($"Player {shootPayload.shooterId} hit {hit.collider.name} at position {hit.point}");
             
             // Aplicar efectos o daño
             HitClientRpc(hit.point, hit.normal, shootPayload.shooterId);
         }
+    }
+
+    bool IsEnemy(Collider targetCollider)
+    {
+    PlayerStats targetStats = targetCollider.GetComponent<PlayerStats>();
+    if (targetStats != null)
+    {
+        return targetStats.teamId.Value != playerStats.teamId.Value;
+    }
+    return false;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void ApplyDamageServerRpc(ulong targetId, float damage)
+    {
+        var target = NetworkManager.Singleton.SpawnManager.SpawnedObjects[targetId];
+        if (target != null)
+        {
+            PlayerStats targetStats = target.GetComponent<PlayerStats>();
+            if (targetStats != null)
+            {
+                Debug.Log($"Applying {damage} damage to {target.name}");
+                targetStats.ApplyDamage(damage);
+            }
+        }
+    }
+
+    [ClientRpc]
+    void ShowDamageTextClientRpc(Vector3 position, float damage)
+    {
+        // Mostrar el texto flotante sobre el objetivo
+        ShowFloatingDamageText(position, damage);
+    }
+
+    void ShowFloatingDamageText(Vector3 position, float damage)
+    {
+        // Crear el texto flotante en la posición del impacto
+        GameObject floatingText = Instantiate(floatingTextPrefab, position, Quaternion.identity);
+        floatingText.GetComponent<TextMesh>().text = damage.ToString("F0");
     }
 
     [ClientRpc]
