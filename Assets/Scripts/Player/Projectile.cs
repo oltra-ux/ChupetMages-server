@@ -2,9 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
+using System.Linq;
+using Utilities;
+using System;
+using Unity.Netcode.Components;
+using Kart;
 
 public class Projectile : NetworkBehaviour
 {
+    [SerializeField]private PlayerShooting playerSht;
+    [SerializeField]private float damageAmount;  // Variable para almacenar el daño del proyectil
+    [SerializeField]private int teamId;  // Team ID del jugador que disparó el proyectil
     [SerializeField] float speed = 31f;
     [SerializeField] float lifetime = 5f;
     [SerializeField] LayerMask hitMask;
@@ -13,6 +21,13 @@ public class Projectile : NetworkBehaviour
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     private bool initialized = false;
+    
+    public void Initialize(PlayerShooting player, float damage, int shooterTeamId)
+    {
+        playerSht = player;
+        damageAmount = damage;
+        teamId = shooterTeamId;
+    }
 
     void Start()
     {
@@ -83,10 +98,44 @@ public class Projectile : NetworkBehaviour
     // Manejar colisiones (solo en el servidor)
     void OnTriggerEnter(Collider other)
     {
-        if (IsServer && ((1 << other.gameObject.layer) & hitMask) != 0)
+        if (IsServer && ((1 << other.gameObject.layer) & hitMask) != 0 && IsEnemy(other))
         {
-            OnHitServerRpc(other.transform.position, other.transform.forward);
+            PlayerStats targetStats = other.GetComponent<PlayerStats>();
+            if (targetStats != null)
+            {
+                playerSht.hitsound.Play();
+                ApplyDamageServerRpc(targetStats.NetworkObjectId, damageAmount);
+            }
+
+            DestroyProjectileServerRpc();  // Destruir el proyectil solo en el servidor
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void ApplyDamageServerRpc(ulong targetId, float damage)
+    {
+        var target = NetworkManager.Singleton.SpawnManager.SpawnedObjects[targetId];
+        if (target != null)
+        {
+            PlayerStats targetStats = target.GetComponent<PlayerStats>();
+            if (targetStats != null)
+            {
+                Debug.Log($"{damage} damage");
+                targetStats.ApplyDamage(damage);
+            }else{
+                Debug.LogError($"targetStats is null. No damage applied.");
+            }
+        }
+    }
+
+    bool IsEnemy(Collider targetCollider)
+    {
+        PlayerStats targetStats = targetCollider.GetComponent<PlayerStats>();
+        if (targetStats != null)
+        {
+            return targetStats.teamId.Value != teamId;
+        }
+        return false;
     }
 
     [ServerRpc]

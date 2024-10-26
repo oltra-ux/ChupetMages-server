@@ -14,7 +14,8 @@ public struct ShootPayload : INetworkSerializable
     public ulong shooterId;
     public Vector3 shotOrigin;
     public Vector3 shotDirection;
-    public DateTime timestamp;  // Para calcular la latencia
+    public DateTime timestamp;  
+    public int spellIndex; // Agregar este campo para identificar el hechizo
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
@@ -23,6 +24,7 @@ public struct ShootPayload : INetworkSerializable
         serializer.SerializeValue(ref shotOrigin);
         serializer.SerializeValue(ref shotDirection);
         serializer.SerializeValue(ref timestamp);
+        serializer.SerializeValue(ref spellIndex); // Serializar el índice del hechizo
     }
 }
 
@@ -38,6 +40,7 @@ public class Spell
 
 public class PlayerShooting : NetworkBehaviour
 {
+    public AudioSource hitsound;
     [SerializeField] List<Spell> spells;  // Lista de hechizos configurados
     private int currentSpellIndex = 0;    // Índice del hechizo actual
     private bool isFiring = false;        // Control para saber si el jugador está disparando
@@ -90,7 +93,7 @@ public class PlayerShooting : NetworkBehaviour
         float delayBetweenSpells = spells.Sum(spell => spell.spellDelay);
 
         // Verificar si el delay es menor o igual a 0 y ajustarlo
-        return Mathf.Max(delayBetweenSpells, 0.01f); // Delay mínimo de 0.01 segundos
+        return Mathf.Max(delayBetweenSpells, 1f / 28f); // Delay mínimo
     }
 
     IEnumerator Fire()
@@ -130,7 +133,8 @@ public class PlayerShooting : NetworkBehaviour
             shooterId = NetworkObjectId,
             shotOrigin = shotOrigin,
             shotDirection = shotDirection,
-            timestamp = DateTime.Now
+            timestamp = DateTime.Now,
+            spellIndex = currentSpellIndex // Aquí pasa el índice del hechizo
         };
 
         // Enviar el disparo al servidor
@@ -147,22 +151,29 @@ public class PlayerShooting : NetworkBehaviour
             shooterId = NetworkObjectId,
             shotOrigin = shotOrigin,
             shotDirection = shotDirection,
-            timestamp = DateTime.Now
+            timestamp = DateTime.Now,
+            spellIndex = currentSpellIndex // Aquí pasa el índice del hechizo
         };
+
 
         SpawnProjectileServerRpc(shootPayload);
     }
     [ServerRpc]
     void SpawnProjectileServerRpc(ShootPayload shootPayload)
     {
-        // Asegurarse de que el servidor spawnee el proyectil
         Vector3 projOrigin = shootPayload.shotOrigin;
         Quaternion shotRotation = Quaternion.LookRotation(shootPayload.shotDirection);
 
         GameObject projectile = Instantiate(projectilePrefab, projOrigin, shotRotation);
         NetworkObject projectileNetObj = projectile.GetComponent<NetworkObject>();
-        projectileNetObj.Spawn();  // Solo el servidor puede spawnear el proyectil en la red
-        //SpawnProjectileClientRpc(projOrigin, shootPayload.shotDirection);
+
+        // Obtener el hechizo actual
+        Spell currentSpell = spells[shootPayload.spellIndex];
+
+        // Inicializar el proyectil con el daño y el Team ID del jugador que lo disparó
+        projectile.GetComponent<Projectile>().Initialize(this, currentSpell.damage, playerStats.teamId.Value);
+
+        projectileNetObj.Spawn();  // Spawnear el proyectil en la red
     }
 
     [ClientRpc]
@@ -193,15 +204,17 @@ public class PlayerShooting : NetworkBehaviour
             if (targetStats != null && IsEnemy(hit.collider))  // Agregamos lógica para enemigos
             {
                 // Aplicar el daño solo en el servidor
-                ApplyDamageServerRpc(targetStats.NetworkObjectId, spells[currentSpellIndex].damage);
+
+                ApplyDamageServerRpc(targetStats.NetworkObjectId, spells[shootPayload.spellIndex].damage);
 
                 // Mostrar el texto flotante solo para el cliente que disparó
-                ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
+                //ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
             }
-            Debug.Log($"Player {shootPayload.shooterId} hit {hit.collider.name} at position {hit.point}");
             
             // Aplicar efectos o daño
+
             HitClientRpc(hit.point, hit.normal, shootPayload.shooterId);
+            hitsound.Play();
         }
     }
 
@@ -219,13 +232,16 @@ public class PlayerShooting : NetworkBehaviour
     void ApplyDamageServerRpc(ulong targetId, float damage)
     {
         var target = NetworkManager.Singleton.SpawnManager.SpawnedObjects[targetId];
+        //Debug.Log($"target{target}");
         if (target != null)
         {
             PlayerStats targetStats = target.GetComponent<PlayerStats>();
             if (targetStats != null)
             {
-                Debug.Log($"Applying {damage} damage to {target.name}");
+                Debug.Log($"{damage} damage");
                 targetStats.ApplyDamage(damage);
+            }else{
+                Debug.LogError($"targetStats is null. No damage applied.");
             }
         }
     }

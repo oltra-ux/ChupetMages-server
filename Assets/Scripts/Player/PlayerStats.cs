@@ -16,7 +16,7 @@ public class PlayerStats : NetworkBehaviour
 
     // En el futuro se pueden agregar más variables sincronizadas como:
     public NetworkVariable<float> damage = new NetworkVariable<float>(10f);
-    public NetworkVariable<float> defense = new NetworkVariable<float>(5f);
+    public NetworkVariable<float> defense = new NetworkVariable<float>(0f);
     public NetworkVariable<float> mana = new NetworkVariable<float>(50f);
 
     public override void OnNetworkSpawn()
@@ -54,14 +54,14 @@ public class PlayerStats : NetworkBehaviour
     {
         // Aquí se podría actualizar la UI de vida en el cliente.
         // Solo se ejecuta en el cliente cuando la vida cambia.
-        Debug.Log($"Health updated from {oldValue} to {newValue}");
+        //Debug.Log($"Health updated from {oldValue} to {newValue}");
     }
 
     public void ApplyDamage(float damage)
     {
     if (!IsServer) return;  // Solo el servidor aplica daño
     float effectiveDamage = Mathf.Max(damage - defense.Value, 0); // Aplica defensa
-    Debug.Log($"Applying {effectiveDamage} effective damage (base damage: {damage}, defense: {defense.Value})");
+    //Debug.Log($"Applying {effectiveDamage} effective damage (base damage: {damage}, defense: {defense.Value})");
     health.Value -= effectiveDamage;
     if (health.Value <= 0)
     {
