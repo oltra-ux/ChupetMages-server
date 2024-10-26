@@ -104,11 +104,25 @@ public class Projectile : NetworkBehaviour
             if (targetStats != null)
             {
                 playerSht.hitsound.Play();
+                ShowDamageTextClientRpc(other.transform.position, damageAmount);
                 ApplyDamageServerRpc(targetStats.NetworkObjectId, damageAmount);
             }
 
             DestroyProjectileServerRpc();  // Destruir el proyectil solo en el servidor
         }
+    }
+    [ClientRpc]
+    void ShowDamageTextClientRpc(Vector3 position, float damage)
+    {
+        // Mostrar el texto flotante sobre el objetivo
+        ShowFloatingDamageText(position, damage);
+    }
+
+    void ShowFloatingDamageText(Vector3 position, float damage)
+    {
+        // Crear el texto flotante en la posición del impacto
+        GameObject floatingText = Instantiate(playerSht.floatingTextPrefab, position, Quaternion.identity);
+        floatingText.GetComponent<dmgText>().StartText(damage);
     }
 
     [ServerRpc(RequireOwnership = false)]

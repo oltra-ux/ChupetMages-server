@@ -53,7 +53,7 @@ public class PlayerShooting : NetworkBehaviour
     [SerializeField] Transform cam;
     [SerializeField] Transform firePoint;
     [SerializeField] GameObject projectilePrefab;
-    [SerializeField] GameObject floatingTextPrefab;
+    [SerializeField] public GameObject floatingTextPrefab;
     private PlayerStats playerStats;
 
     [Header("Network General")]
@@ -206,13 +206,12 @@ public class PlayerShooting : NetworkBehaviour
                 // Aplicar el daño solo en el servidor
 
                 ApplyDamageServerRpc(targetStats.NetworkObjectId, spells[shootPayload.spellIndex].damage);
+                ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
 
                 // Mostrar el texto flotante solo para el cliente que disparó
-                //ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
             }
             
             // Aplicar efectos o daño
-
             HitClientRpc(hit.point, hit.normal, shootPayload.shooterId);
             hitsound.Play();
         }
@@ -257,7 +256,7 @@ public class PlayerShooting : NetworkBehaviour
     {
         // Crear el texto flotante en la posición del impacto
         GameObject floatingText = Instantiate(floatingTextPrefab, position, Quaternion.identity);
-        floatingText.GetComponent<TextMesh>().text = damage.ToString("F0");
+        floatingText.GetComponent<dmgText>().StartText(damage);
     }
 
     [ClientRpc]

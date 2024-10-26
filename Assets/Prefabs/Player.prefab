@@ -260,7 +260,7 @@ GameObject:
   - component: {fileID: 238987853753782915}
   m_Layer: 0
   m_Name: Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -602,6 +602,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f865c17c19a3ff14a9fc749b222dadbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isTestDummy: 0
   teamId:
     m_InternalValue: 0
   health:
@@ -632,7 +633,7 @@ MonoBehaviour:
     spellDelay: 0
     projectileSpeed: 0
     damage: 1
-  - spellType: 1
+  - spellType: 0
     spellDelay: 0
     projectileSpeed: 0
     damage: 7
@@ -650,7 +651,7 @@ MonoBehaviour:
   firePoint: {fileID: 7134558686710858071}
   projectilePrefab: {fileID: 793839301572942795, guid: 4e46cb800acdbf740b099ebd9962be4b,
     type: 3}
-  floatingTextPrefab: {fileID: 1483520738830215945, guid: f3a916f2c33d82e459ddc17cd0851e7c,
+  floatingTextPrefab: {fileID: 6506308038058577612, guid: f99097623bb4fef468c0e4154f9d0e69,
     type: 3}
 --- !u!114 &8771271469453050174
 MonoBehaviour:

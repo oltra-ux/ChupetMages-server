@@ -10,6 +10,7 @@ using Kart;
 
 public class PlayerStats : NetworkBehaviour
 {
+    public bool isTestDummy = false;
     public NetworkVariable<int> teamId = new NetworkVariable<int>(0);
     public NetworkVariable<float> health = new NetworkVariable<float>(100f); // Valor inicial de vida
     public NetworkVariable<float> maxHealth = new NetworkVariable<float>(100f);
@@ -37,16 +38,22 @@ public class PlayerStats : NetworkBehaviour
     // Solo el servidor asigna el teamId
     private void AssignTeamId()
     {
-        // Usa el OwnerClientId para diferenciar entre el host y los clientes
-        if (OwnerClientId == NetworkManager.Singleton.LocalClientId)
+        if(isTestDummy)
         {
-            teamId.Value = 0;  // Host tiene el teamId 0
-        }
-        else
+            teamId.Value = 99;
+        }else
         {
-            teamId.Value = 1;  // Clientes tienen el teamId 1
-        }
+            // Usa el OwnerClientId para diferenciar entre el host y los clientes
+            if (OwnerClientId == NetworkManager.Singleton.LocalClientId)
+            {
+                teamId.Value = 0;  // Host tiene el teamId 0
+            }
+            else
+            {
+                teamId.Value = 1;  // Clientes tienen el teamId 1
+            }
 
+        }
         Debug.Log($"Assigned teamId: {teamId.Value} to {gameObject.name} (OwnerClientId: {OwnerClientId})");
     }
 
