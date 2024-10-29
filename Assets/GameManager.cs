@@ -27,7 +27,7 @@ public class GameManager : NetworkBehaviour
     public NetworkVariable<float> stateTimer = new NetworkVariable<float>();
     public NetworkVariable<int> connectedPlayers = new NetworkVariable<int>(0); // Número de jugadores conectados
 
-    private int requiredPlayers = 2;
+    public int requiredPlayers = 2;
 
     private void Awake()
     {
@@ -45,7 +45,7 @@ public class GameManager : NetworkBehaviour
         if (IsServer)
         {
             currentState.Value = GameState.GameWait;
-            stateTimer.Value = 60f; // 1 minuto de espera por jugadores
+            stateTimer.Value = 30f; // 1 minuto de espera por jugadores
         }
     }
 
@@ -62,6 +62,28 @@ public class GameManager : NetworkBehaviour
             {
                 HandleStateTransition();
             }
+
+            switch(currentState.Value)
+            {
+                case GameState.GameWait:
+                if (connectedPlayers.Value >= requiredPlayers)
+                {
+                    Debug.Log("jugadores conectados");
+                    currentState.Value = GameState.GameStarting;
+                    stateTimer.Value = 5f;
+                }
+                    break;
+                case GameState.GameStarting:
+                    break;
+                case GameState.GamePreRound:
+                    break;
+                case GameState.RoundStarting:
+                    break;
+                case GameState.GameRound:
+                    break;
+                case GameState.GameEnded:
+                    break;
+            }
         }
     }
 
@@ -70,13 +92,7 @@ public class GameManager : NetworkBehaviour
         switch (currentState.Value)
         {
             case GameState.GameWait:
-            Debug.Log($"Jugadores conectados: {connectedPlayers.Value}. Se requieren: {requiredPlayers}");
-                if (connectedPlayers.Value >= requiredPlayers)
-                {
-                    Debug.Log("jugadores conectados");
-                    currentState.Value = GameState.GameStarting;
-                    stateTimer.Value = 5f;
-                }
+                currentState.Value = GameState.GameStarting;
                 break;
             case GameState.GameStarting:
                 currentState.Value = GameState.GamePreRound;
@@ -97,6 +113,10 @@ public class GameManager : NetworkBehaviour
                 // Fin del juego, volver a la lobby o reiniciar
                 break;
         }
+    }
+    private void UpdateGameWait()
+    {
+        
     }
 
     private void HandleEndRound()

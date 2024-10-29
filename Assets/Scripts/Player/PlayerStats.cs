@@ -44,10 +44,6 @@ public class PlayerStats : NetworkBehaviour
             health.OnValueChanged += OnHealthChanged;
             isDead.OnValueChanged += OnDeathStateChanged;
         }
-        if(IsOwner)
-        {
-            //specPl.SetActive(false);
-        }
     }
     private IEnumerator WaitForGameManager()
     {
