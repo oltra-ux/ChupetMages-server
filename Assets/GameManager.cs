@@ -66,25 +66,42 @@ public class GameManager : NetworkBehaviour
             switch(currentState.Value)
             {
                 case GameState.GameWait:
-                if (connectedPlayers.Value >= requiredPlayers)
-                {
-                    Debug.Log("jugadores conectados");
-                    currentState.Value = GameState.GameStarting;
-                    stateTimer.Value = 5f;
-                }
+                UpdateGameWait();
                     break;
                 case GameState.GameStarting:
                     break;
                 case GameState.GamePreRound:
+                UpdateGamePreRound();
                     break;
                 case GameState.RoundStarting:
                     break;
                 case GameState.GameRound:
+                UpdateGameRound();
                     break;
                 case GameState.GameEnded:
                     break;
             }
         }
+    }
+
+    private void UpdateGameWait()
+    {
+        if (connectedPlayers.Value >= requiredPlayers)
+        {
+            Debug.Log("jugadores conectados");
+            currentState.Value = GameState.GameStarting;
+            stateTimer.Value = 5f;
+        }
+    }
+
+    private void UpdateGamePreRound()
+    {
+
+    }
+
+    private void UpdateGameRound()
+    {
+
     }
 
     private void HandleStateTransition()
@@ -113,10 +130,6 @@ public class GameManager : NetworkBehaviour
                 // Fin del juego, volver a la lobby o reiniciar
                 break;
         }
-    }
-    private void UpdateGameWait()
-    {
-        
     }
 
     private void HandleEndRound()
