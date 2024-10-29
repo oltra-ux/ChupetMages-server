@@ -79,6 +79,10 @@ public class PlayerMovement : NetworkBehaviour
     bool isGrounded;
     float groundDistance = 0.4f;
 
+    [Header("Spectator")]
+    public float specSpeed;
+    public bool IsSpec = false;
+
     Vector3 moveDirection;
     Vector3 slopeMoveDirection;
 
@@ -386,40 +390,46 @@ public class PlayerMovement : NetworkBehaviour
     void Move(Vector2 inputVector)
     {
         //Debug.Log("Move");
-        float verticalMovement=AdjustInput(input.Move.y);
-        float horizontalMovement=AdjustInput(input.Move.x);
-        float AdjustInput(float input){
-            return input switch{
-                >=.7f => 1f,
-                <= -.7f => -1f,
-                _=> input
-            };
-        }
+        if(!IsSpec){
+            float verticalMovement=AdjustInput(input.Move.y);
+            float horizontalMovement=AdjustInput(input.Move.x);
+            float AdjustInput(float input){
+                return input switch{
+                    >=.7f => 1f,
+                    <= -.7f => -1f,
+                    _=> input
+                };
+            }
         
-        moveDirection = orientation.forward * verticalMovement + orientation.right * horizontalMovement;
-        slopeMoveDirection = Vector3.ProjectOnPlane(moveDirection, slopeHit.normal);
-        float lerpFraction = timer.minTimeBetweenTicks / (1f / Time.deltaTime);
+            moveDirection = orientation.forward * verticalMovement + orientation.right * horizontalMovement;
+            slopeMoveDirection = Vector3.ProjectOnPlane(moveDirection, slopeHit.normal);
+            float lerpFraction = timer.minTimeBetweenTicks / (1f / Time.deltaTime);
 
-        if(isGrounded)
-        {
-            rb.useGravity=false;
+            if(isGrounded)
+            {
+                rb.useGravity=false;
+            }else
+            {
+                rb.useGravity=true;
+            }
+            if(isGrounded && !OnSlope())
+            {
+                rb.AddForce(moveDirection.normalized * moveSpeed * movementMultiplier, ForceMode.Acceleration);
+            //Debug.Log("Move");
+            }
+            else if(isGrounded && OnSlope())
+            {
+                rb.AddForce(slopeMoveDirection.normalized * moveSpeed * movementMultiplier, ForceMode.Acceleration);
+            }
+            else if(!isGrounded)
+            {
+                rb.AddForce(moveDirection.normalized * moveSpeed * movementMultiplier * airMultiplier, ForceMode.Acceleration);
+            }
         }else
         {
-            rb.useGravity=true;
+            transform.Translate(input.Move * specSpeed * Time.deltaTime);
         }
-        if(isGrounded && !OnSlope())
-        {
-            rb.AddForce(moveDirection.normalized * moveSpeed * movementMultiplier, ForceMode.Acceleration);
-            //Debug.Log("Move");
-        }
-        else if(isGrounded && OnSlope())
-        {
-            rb.AddForce(slopeMoveDirection.normalized * moveSpeed * movementMultiplier, ForceMode.Acceleration);
-        }
-        else if(!isGrounded)
-        {
-            rb.AddForce(moveDirection.normalized * moveSpeed * movementMultiplier * airMultiplier, ForceMode.Acceleration);
-        }
+
     }
     
 

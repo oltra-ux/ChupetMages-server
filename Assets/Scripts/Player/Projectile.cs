@@ -104,7 +104,7 @@ public class Projectile : NetworkBehaviour
             if (targetStats != null)
             {
                 playerSht.hitsound.Play();
-                ShowDamageTextClientRpc(other.transform.position, damageAmount);
+                //ShowDamageTextClientRpc(other.transform.position, damageAmount);
                 ApplyDamageServerRpc(targetStats.NetworkObjectId, damageAmount);
             }
 

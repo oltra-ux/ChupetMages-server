@@ -206,7 +206,7 @@ public class PlayerShooting : NetworkBehaviour
                 // Aplicar el daño solo en el servidor
 
                 ApplyDamageServerRpc(targetStats.NetworkObjectId, spells[shootPayload.spellIndex].damage);
-                ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
+                //ShowDamageTextClientRpc(hit.point, spells[currentSpellIndex].damage);
 
                 // Mostrar el texto flotante solo para el cliente que disparó
             }
