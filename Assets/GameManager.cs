@@ -131,6 +131,11 @@ public class GameManager : NetworkBehaviour
                 break;
         }
     }
+    private void StateChange(GameState newState, float time)
+    {
+        currentState.Value = newState;
+        stateTimer.Value = time;
+    }
 
     private void HandleEndRound()
     {
